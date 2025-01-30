@@ -72,17 +72,18 @@ namespace RelationsNaN.Controllers
         // GET: Games/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Game == null)
             {
                 return NotFound();
             }
 
-            var game = await _context.Game.FindAsync(id);
+            var game = await _context.Game.Include(g => g.Platforms).FirstOrDefaultAsync(x => x.Id == id);
             if (game == null)
             {
                 return NotFound();
             }
             ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name", game.GenreId);
+            ViewData["Platforms"] = new SelectList(_context.Platform.Where(x => !game.Platforms.Contains(x)), "Id", "Name");
             return View(game);
         }
 
@@ -159,6 +160,34 @@ namespace RelationsNaN.Controllers
         private bool GameExists(int id)
         {
             return _context.Game.Any(e => e.Id == id);
+        }
+
+        public async Task<IActionResult> AddPlatform(int id, int platformId)
+        {
+            Game game = await _context.Game.Where(g => g.Id == id).Include(p => p.Platforms).SingleOrDefaultAsync();
+            Platform platform = await _context.Platform.Where(p => p.Id == platformId).FirstOrDefaultAsync();
+
+            game.Platforms.Add(platform);
+            await _context.SaveChangesAsync();
+
+
+            ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name", game.GenreId);
+            ViewData["Platforms"] = new SelectList(_context.Platform.Where(x => !game.Platforms.Contains(x)), "Id", "Name");
+            return View("edit", game);
+        }
+
+        public async Task<IActionResult> RemovePlatform(int id, int platformId)
+        {
+            Game game = await _context.Game.Where(g => g.Id == id).Include(p => p.Platforms).SingleOrDefaultAsync();
+            Platform platform = await _context.Platform.Where(p => p.Id == platformId).FirstOrDefaultAsync();
+
+            game.Platforms.Remove(platform);
+            await _context.SaveChangesAsync();
+
+
+            ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name", game.GenreId);
+            ViewData["Platforms"] = new SelectList(_context.Platform.Where(x => !game.Platforms.Contains(x)), "Id", "Name");
+            return View("edit", game);
         }
     }
 }
